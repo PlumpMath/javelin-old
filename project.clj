@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[alandipert/cljs-priority-map "1.0.0-SNAPSHOT"]]
   :plugins [[lein-cljsbuild "0.3.0"]]
+  :source-paths ["src/clj"]
   :cljsbuild {:builds
               {:dev
                {:source-paths ["src/cljs"]

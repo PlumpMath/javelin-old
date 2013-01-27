@@ -1,5 +1,6 @@
 (ns alandipert.waffle
-  (:require [alandipert.priority-map :refer [priority-map]]))
+  (:require [alandipert.priority-map :refer [priority-map]])
+  (:require-macros [alandipert.waffle.macros :as -]))
 
 (let [rank (atom 0)
       stamp (atom 0)]
@@ -106,9 +107,7 @@
 
 (def e1 (receiverE))
 
-(def e2 (->> e1
-             (mapE #(.toUpperCase %))
-             (mapE #(js/alert %))))
+(def e2 (-/> mapE e1 .toUpperCase (#(str % "!")) js/alert))
 
 (defn doit []
   (doseq [c "omg"] (send-event e1 c)))
