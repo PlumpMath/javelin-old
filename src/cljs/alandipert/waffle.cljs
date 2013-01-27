@@ -6,19 +6,19 @@
   (defn next-rank [] (swap! rank inc))
   (defn next-stamp [] (swap! stamp inc)))
 
-(defn process-queue
+(defn process
   [queue]
   (when (seq queue)
-    (let [qv (key (peek queue))            
-          next-pulse ((get-in qv [:n :updater]) (:v qv))]
+    (let [{:keys [n v]} (key (peek queue))
+          next-pulse ((:updater n) v)]
       (if (not= next-pulse ::do-not-propagate)
         (recur (reduce #(assoc %1 {:n %2, :v next-pulse} @(:rank %2))
                        (pop queue)
-                       @(get-in qv [:n :sends-to])))))))
+                       @(:sends-to n)))))))
 
-(defn propagate-pulse
+(defn propagate
   [pulse node]
-  (process-queue (priority-map {:n node, :v pulse} @(:rank node))))
+  (process (priority-map {:n node, :v pulse} @(:rank node))))
 
 (defn pulse [stamp value]
   {:stamp stamp, :value value})
@@ -36,7 +36,8 @@
   (let [this {:updater updater
               :sends-to (atom [])
               :rank (atom (next-rank))}]
-    (doseq [node nodes] (attach-listener! node this))
+    (doseq [node nodes]
+      (attach-listener! node this))
     this))
 
 (defn remove-listener! [node dependent]
@@ -52,10 +53,10 @@
 
 (defn receiverE []
   (let [evt (internalE)]
-    (assoc evt :send-event #(propagate-pulse (pulse (next-stamp) %) evt))))
+    (assoc evt :send-event #(propagate (pulse (next-stamp) %) evt))))
 
 (defn send-event [node value]
-  (propagate-pulse (pulse (next-stamp) value) node))
+  (propagate (pulse (next-stamp) value) node))
 
 (defn zeroE
   "Create an event stream that never fires any events."
@@ -97,14 +98,17 @@
         :underlying-raw e
         :underlying underlying})))
 
-;; (defn bindE [k])
-
-(defn mapE [f e]
+(defn mapE
+  [f e]
   (event-stream [e] #(update-in % [:value] f)))
 
-(def r (->> (receiverE) (mapE #(js/alert %))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def e1 (receiverE))
+
+(def e2 (->> e1
+             (mapE #(.toUpperCase %))
+             (mapE #(js/alert %))))
 
 (defn doit []
-  (send-event r "o")
-  (send-event r "m")
-  (send-event r "g"))
+  (doseq [c "omg"] (send-event e1 c)))
