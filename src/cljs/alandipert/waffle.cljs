@@ -1,19 +1,19 @@
 (ns alandipert.waffle
   (:require [alandipert.priority-map :refer [priority-map]]
-            [alandipert.desiderata   :as d]))
+            [alandipert.desiderata   :as    d]))
 
 (let [rank  (atom 0)
       stamp (atom 0)]
   (def next-rank  #(swap! rank inc))
   (def next-stamp #(swap! stamp inc)))
 
-(defrecord EventStream [sources sinks rank update-fn])
+(defrecord EventStream [sinks rank update-fn])
 
 (defrecord Pulse [stamp value])
 
 (defn make-event-stream
-  [sources sinks update-fn]
-  (atom (EventStream. sources sinks (next-rank) update-fn)))
+  [sinks update-fn]
+  (atom (EventStream. sinks (next-rank) update-fn)))
 
 (defn make-pulse
   [value]
@@ -45,7 +45,7 @@
 
 (defn event-stream
   [nodes update-fn]
-  (let [e (make-event-stream [] [] update-fn)]
+  (let [e (make-event-stream [] update-fn)]
     (doseq [node nodes] (add-sink! node e))
     e))
 
@@ -80,13 +80,19 @@
   [e f]
   (event-stream [e] #(update-in % [:value] f)))
 
+(defn tapE
+  "Presumes f is for side effects and discards its value. To preserve
+  consistency, f must not call send-event! or cause it to be called."
+  [e f]
+  (mapE e #(do (f %) %)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def e1 (receiverE))
-
-(def e2 (-> e1
-            (mapE #(.toUpperCase %))
-            (mapE #(js/alert %))))
-
 (defn doit []
-  (doseq [c "omg"] (send-event! e1 c)))
+  (let [e1 (receiverE)
+        e2 (-> e1
+               (mapE #(.toUpperCase %))
+               (tapE #(js/alert %))
+               (tapE #(js/document.write %)))]
+    (doseq [c "omg"]
+      (send-event! e1 c))))
