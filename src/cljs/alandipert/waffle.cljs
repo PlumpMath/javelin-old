@@ -1,98 +1,123 @@
 (ns alandipert.waffle
-  (:require [alandipert.priority-map :refer [priority-map]]
-            [alandipert.desiderata   :as    d]))
+  (:require
+   [alandipert.priority-map  :refer [priority-map]]
+   [alandipert.desiderata    :as    d]
+   [cljs.core                :as    cljs])
+  (:require-macros
+   [alandipert.waffle.macros :refer [with-let]])
+  (:refer-clojure :exclude [map]))
+
+;;; Internals
 
 (let [rank  (atom 0)
       stamp (atom 0)]
   (def next-rank  #(swap! rank inc))
   (def next-stamp #(swap! stamp inc)))
 
-(defrecord EventStream [sinks rank update-fn])
+(defprotocol INode "Base functionality of either EventStream or
+Behavior.  The graph is modeled with objects containing atoms
+instead of with just atoms.  This makes it easier for consumers to
+extend types used here."
+             (-sinks [_] "Atom of a collection of INodes")
+             (-rank [_] "Atom of a number")
+             (-update-fn [_] "Atom of function to invoke with new pulses."))
 
-(defrecord Pulse [stamp value])
+(defrecord EventStream [sinks rank update-fn]
+  INode
+  (-sinks [_] sinks)
+  (-rank [_] rank)
+  (-update-fn [_] update-fn))
 
-(defn make-event-stream
-  [sinks update-fn]
-  (atom (EventStream. sinks (next-rank) update-fn)))
+(defrecord Behavior [sinks rank update-fn last-value]
+  INode
+  (-sinks [_] sinks)
+  (-rank [_] rank)
+  (-update-fn [_] update-fn)
+
+  cljs.core/IDeref
+  (-deref [_] @last-value))
 
 (defn make-pulse
   [value]
-  (Pulse. (next-stamp) value))
+  {:stamp (next-stamp) :value value})
 
-(def stop ::stop)
+(defn make-event-stream
+  [sinks update-fn]
+  (EventStream. (atom sinks)
+                (atom (next-rank))
+                (atom update-fn)))
+
+(defn behavior-fn
+  "The difference between Behaviors and EventStreams is that behaviors
+  only propagate when the new value differs from the Behavior's last
+  value.
+
+  update-fn is wrapped with a function returning the ::halt sentinel
+  if the value is not new."
+  [behavior update-fn]
+  (fn [pulse]
+    (if (not= (:value pulse) @behavior)
+      (@(-update-fn behavior) pulse)
+      ::halt)))
+
+(defn make-behavior
+  [sinks update-fn init-value]
+  (with-let [b (Behavior. (atom sinks)
+                            (atom (next-rank))
+                            (atom nil)
+                            (atom init-value))]
+    (reset! (-update-fn b) (behavior-fn b update-fn))))
 
 (defn propagate!
   [node pulse]
-  (loop [queue (priority-map {:node node :pulse pulse} (:rank @node))]
+  (loop [queue (priority-map {:node node :pulse pulse} @(-rank node))]
     (if (seq queue)
       (let [{:keys [node pulse]} (key (peek queue))
-            next-pulse ((:update-fn @node) pulse)]
-        (if (not= next-pulse stop)
-          (recur (reduce #(assoc %1 {:node %2 :pulse next-pulse} (:rank @%2))
+            next-pulse (@(-update-fn node) pulse)]
+        (if (not= next-pulse ::halt)
+          (recur (reduce #(assoc %1 {:node %2 :pulse next-pulse} @(-rank %2))
                          (pop queue)
-                         (:sinks @node))))))))
+                         @(-sinks node))))))))
 
 (defn add-sink!
-  [e dependent]
-  (swap! e update-in [:sinks] conj dependent)
-  (if (> (:rank @e) (:rank @dependent))
-    (doseq [dep (d/bf-seq identity :sinks dependent)]
-      (swap! dep assoc :rank (next-rank)))))
+  [node dependent]
+  (swap! (-sinks node) conj dependent)
+  (if (> @(-rank node) @(-rank dependent))
+    (doseq [dep (d/bf-seq identity (comp deref -sinks) dependent)]
+      (reset! (-rank dep) (next-rank)))))
 
 (defn remove-sink!
-  [e dependent]
-  (swap! e update-in [:sinks] #(filterv (partial not= dependent) %)))
+  [node dependent]
+  (swap! (-sinks node) #(filterv (partial not= dependent) %)))
 
 (defn event-stream
   [nodes update-fn]
-  (let [e (make-event-stream [] update-fn)]
-    (doseq [node nodes] (add-sink! node e))
-    e))
+  (with-let [e (make-event-stream [] update-fn)]
+    (doseq [node nodes]
+      (add-sink! node e))))
 
-(defn internalE
-  ([] (internalE []))
-  ([depends-on] (event-stream depends-on identity)))
+(defn internal
+  [depends-on]
+  (event-stream depends-on identity))
 
-(def receiverE internalE)
+;;; API
+
+(def receiver internal)
 
 (defn send-event!
   [node value]
   (propagate! node (make-pulse value)))
 
-(defn zeroE
-  "Create an event stream that never fires any events."
-  []
-  (event-stream
-   []
-   #(throw
-     (js/Error.
-      (str "zeroE : should not have received a value; the value was " (pr-str %))))))
-
-(defn mergeE
-  [& es]
-  (if (seq es) (internalE es) (zeroE)))
-
-(defn constantE
-  [e constant-value]
-  (event-stream [e] #(assoc % :value constant-value)))
-
-(defn mapE
+(defn map
   [e f]
   (event-stream [e] #(update-in % [:value] f)))
 
-(defn tapE
-  "Presumes f is for side effects and discards its value. To preserve
-  consistency, f must not call send-event! or cause it to be called."
-  [e f]
-  (mapE e #(do (f %) %)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Example
 
 (defn doit []
-  (let [e1 (receiverE)
+  (let [e1 (receiver)
         e2 (-> e1
-               (mapE #(.toUpperCase %))
-               (tapE #(js/alert %))
-               (tapE #(js/document.write %)))]
+               (map #(.toUpperCase %))
+               (map #(js/alert %)))]
     (doseq [c "omg"]
       (send-event! e1 c))))
