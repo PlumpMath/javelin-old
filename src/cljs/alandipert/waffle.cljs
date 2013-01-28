@@ -36,7 +36,7 @@
   [e dependent]
   (swap! e update-in [:sinks] conj dependent)
   (if (> (:rank @e) (:rank @dependent))
-    (doseq [dep (d/bf-seq identity :sinks [dependent])]
+    (doseq [dep (d/bf-seq identity :sinks dependent)]
       (swap! dep assoc :rank (next-rank)))))
 
 (defn remove-sink!
@@ -57,9 +57,7 @@
 
 (defn send-event!
   [node value]
-  (if (:internal (meta node))
-    (throw (js/Error. "Can't send event to non-receiver."))
-    (propagate! node (make-pulse value))))
+  (propagate! node (make-pulse value)))
 
 (defn zeroE
   "Create an event stream that never fires any events."
