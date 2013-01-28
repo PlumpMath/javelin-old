@@ -1,114 +1,94 @@
 (ns alandipert.waffle
-  (:require [alandipert.priority-map :refer [priority-map]]))
+  (:require [alandipert.priority-map :refer [priority-map]]
+            [alandipert.desiderata   :as d]))
 
-(let [rank (atom 0)
+(let [rank  (atom 0)
       stamp (atom 0)]
-  (defn next-rank [] (swap! rank inc))
-  (defn next-stamp [] (swap! stamp inc)))
+  (def next-rank  #(swap! rank inc))
+  (def next-stamp #(swap! stamp inc)))
 
-(defn process
-  [queue]
-  (when (seq queue)
-    (let [{:keys [n v]} (key (peek queue))
-          next-pulse ((:updater n) v)]
-      (if (not= next-pulse ::do-not-propagate)
-        (recur (reduce #(assoc %1 {:n %2, :v next-pulse} @(:rank %2))
-                       (pop queue)
-                       @(:sends-to n)))))))
+(defrecord EventStream [sources sinks rank update-fn])
 
-(defn propagate
-  [pulse node]
-  (process (priority-map {:n node, :v pulse} @(:rank node))))
+(defrecord Pulse [stamp value])
 
-(defn pulse [stamp value]
-  {:stamp stamp, :value value})
+(defn make-event-stream
+  [sources sinks update-fn]
+  (atom (EventStream. sources sinks (next-rank) update-fn)))
 
-(defn attach-listener! [node dependent]
-  (swap! (:sends-to node) conj dependent)
-  (if (> @(:rank node) @(:rank dependent))
-    (loop [q [dependent]]
-      (when-let [[cur] dependent]
-        (reset! (:rank cur) (next-rank))
-        (recur (concat q (:sends-to cur)))))))
+(defn make-pulse
+  [value]
+  (Pulse. (next-stamp) value))
+
+(def stop ::stop)
+
+(defn propagate!
+  [node pulse]
+  (loop [queue (priority-map {:node node :pulse pulse} (:rank @node))]
+    (if (seq queue)
+      (let [{:keys [node pulse]} (key (peek queue))
+            next-pulse ((:update-fn @node) pulse)]
+        (if (not= next-pulse stop)
+          (recur (reduce #(assoc %1 {:node %2 :pulse next-pulse} (:rank @%2))
+                         (pop queue)
+                         (:sinks @node))))))))
+
+(defn add-sink!
+  [e dependent]
+  (swap! e update-in [:sinks] conj dependent)
+  (if (> (:rank @e) (:rank @dependent))
+    (doseq [dep (d/bf-seq identity :sinks [dependent])]
+      (swap! dep assoc :rank (next-rank)))))
+
+(defn remove-sink!
+  [e dependent]
+  (swap! e update-in [:sinks] #(filterv (partial not= dependent) %)))
 
 (defn event-stream
-  [nodes updater]
-  (let [this {:updater updater
-              :sends-to (atom [])
-              :rank (atom (next-rank))}]
-    (doseq [node nodes]
-      (attach-listener! node this))
-    this))
-
-(defn remove-listener! [node dependent]
-  (let [n-before (count @(:sends-to node))
-        n-after (count (swap! (:sends-to node)
-                              #(filterv (partial not= dependent) %)))
-        found-sending (not= n-before n-after)]
-    found-sending))
+  [nodes update-fn]
+  (let [e (make-event-stream [] [] update-fn)]
+    (doseq [node nodes] (add-sink! node e))
+    e))
 
 (defn internalE
   ([] (internalE []))
   ([depends-on] (event-stream depends-on identity)))
 
-(defn receiverE []
-  (let [evt (internalE)]
-    (assoc evt :send-event #(propagate (pulse (next-stamp) %) evt))))
+(def receiverE internalE)
 
-(defn send-event [node value]
-  (propagate (pulse (next-stamp) value) node))
+(defn send-event!
+  [node value]
+  (if (:internal (meta node))
+    (throw (js/Error. "Can't send event to non-receiver."))
+    (propagate! node (make-pulse value))))
 
 (defn zeroE
   "Create an event stream that never fires any events."
   []
   (event-stream
    []
-   #(throw (js/Error. (str "zeroE : received a value; zeroE should not receive a value; the value was " (pr-str %))))))
-
-(defn oneE
-  "Create an event stream that fires just one event with the value val."
-  [val]
-  (let [sent? (atom false)
-        evt (event-stream
-             []
-             #(if @sent?
-               (throw (js/Error. "oneE : received an extra value."))
-               (do (swap! sent? not) %)))]
-    (.setTimeout js/window #(send-event evt val) 0)
-    evt))
+   #(throw
+     (js/Error.
+      (str "zeroE : should not have received a value; the value was " (pr-str %))))))
 
 (defn mergeE
-  "Triggers when any of the argument event stream trigger; carries the
-  signal from the last event stream that triggered."
   [& es]
   (if (seq es) (internalE es) (zeroE)))
 
 (defn constantE
-  "Transforms this event stream to produce only constant-value."
   [e constant-value]
   (event-stream [e] #(assoc % :value constant-value)))
 
-(defn behavior
-  ([e init]
-     (behavior e init identity))
-  ([e init updater]
-     (let [last (atom init)
-           underlying #(assoc % :value (reset! last (updater (:value %))))]
-       {:last last
-        :underlying-raw e
-        :underlying underlying})))
-
 (defn mapE
-  [f e]
+  [e f]
   (event-stream [e] #(update-in % [:value] f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def e1 (receiverE))
 
-(def e2 (->> e1
-             (mapE #(.toUpperCase %))
-             (mapE #(js/alert %))))
+(def e2 (-> e1
+            (mapE #(.toUpperCase %))
+            (mapE #(js/alert %))))
 
 (defn doit []
-  (doseq [c "omg"] (send-event e1 c)))
+  (doseq [c "omg"] (send-event! e1 c)))
