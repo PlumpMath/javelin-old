@@ -62,9 +62,5 @@
         sum ((lift +) n1 n2)]
     (map sum #(.log js/console (str "new sum: " %)))
     (.log js/console (str "starting sum: " @sum))
-
-    (doseq [s (bf-seq identity (comp ::sinks meta) n1)]
-      (.log js/console (pr-str (meta s))))
-;    (js/setInterval #(swap! n1 inc) 300)
-;    (js/setInterval #(swap! n2 inc) 500)
-    ))
+    (js/setInterval #(swap! n1 inc) 300)
+    (js/setInterval #(swap! n2 inc) 500)))
