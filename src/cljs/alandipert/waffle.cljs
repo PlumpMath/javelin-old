@@ -33,14 +33,12 @@
     (alter-meta! assoc
                  ::rank (next-rank)
                  ::sinks []
-                 ::update-fn update-fn)))
+                 ::update-fn update-fn)
+    (add-watch ::propagate (fn [& _] (propagate! atm)))))
 
 (defn behavior
   [init]
-  (let [atm (atom init)]
-    (doto atm
-      (make-node (constantly true))
-      (add-watch ::propagate (fn [& _] (propagate! atm))))))
+  (make-node (atom init) (constantly true)))
 
 (defn map
   [source f]
