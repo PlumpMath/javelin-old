@@ -3,6 +3,9 @@
 /classes
 /checkouts
 pom.xml
+*.swn
+*.swo
+*.swp
 *.jar
 *.class
 .lein-deps-sum
