@@ -59,11 +59,11 @@
 (defn input
   "FRP-ize an atom, making it an 'input cell'."
   [atm]
-  (if (not (-> atm meta ::sinks))
+  (if (-> atm meta ::sinks)
+    (throw (js/Error. "Atom is already an FRP cell!"))
     (doto atm
       (add-watch ::propagate (fn [_ atm _ _] (propagate! atm)))
-      make-node)
-    (throw (Exception. "Atom is already an FRP cell!"))))
+      make-node)))
 
 (defn lift
   "Given a function f or an atom containing a function f, returns a function
