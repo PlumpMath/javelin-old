@@ -19,15 +19,15 @@
      (doto atm
        (alter-meta! update-in [::sinks] #(or % []))
        (alter-meta! update-in [::rank] #(or % (next-rank)))
-       (alter-meta! update-in [::update-fn] #(or % update-fn)))))
+       (alter-meta! update-in [::thunk] #(or % update-fn)))))
 
-(defn wrap-update-fn!
+(defn wrap-thunk!
   "Wrap the atom atm's update function with the function f."
   [atm f]
-  (let [old-update-fn (-> atm meta ::update-fn)
-        new-update-fn #(f old-update-fn)]
+  (let [old-thunk (-> atm meta ::thunk)
+        new-thunk #(f old-thunk)]
     (doto atm
-      (alter-meta! update-in [::update-fn] new-update-fn))))
+      (alter-meta! update-in [::thunk] new-thunk))))
 
 (defn increase-sink-ranks!
   "Walk source's sinks in rank order and increase the rank of each."
@@ -52,7 +52,7 @@
     (when (seq queue)
       (let [node (key (peek queue))
             remainder (pop queue)]
-        (recur (if (not= ::halt ((-> node meta ::update-fn)))
+        (recur (if (not= ::halt ((-> node meta ::thunk)))
                  (reduce #(assoc %1 %2 (-> %2 meta ::rank)) remainder (-> node meta ::sinks))
                  remainder))))))
 
