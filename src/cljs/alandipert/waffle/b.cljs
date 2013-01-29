@@ -2,13 +2,14 @@
   (:require
     [alandipert.waffle  :as w]
     [cljs.core          :as cljs])
-  (:refer-clojure :exclude [map identity filter]))
+  (:refer-clojure :exclude [map identity filter])
+  (:require-macros [alandipert.waffle.macros :refer [maptemplate]]))
 
 (defn no-repeats
   "Stops propagation of repeated values from this FRP atom."
   [atm]
   (doto atm
-    (w/wrap-update-fn!
+    (w/wrap-thunk!
       (fn [oldfn]
         (let [oldval @atm
               retval (oldfn)
@@ -17,8 +18,10 @@
                    (not= oldval newval))
               :w/halt))))))
 
-(def lift     (comp no-repeats w/lift))
+(def lift     (fn [to-lift]
+                (fn [& atoms]
+                  (apply w/lift (no-repeats to-lift) atoms))))
 
-(def map      (lift cljs/map))
-(def identity (lift cljs/identity))
-(def filter   (lift cljs/filter))
+(maptemplate
+  (fn [sym] `(def ~sym (~'lift ~(symbol (str 'cljs) (str sym)))))
+  [map identity filter])
