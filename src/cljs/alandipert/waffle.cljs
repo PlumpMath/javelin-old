@@ -24,7 +24,7 @@
   [source sink]
   (alter-meta! source update-in [::sinks] (fnil conj []) sink)
   (if (> (-> source meta ::rank) (-> sink meta ::rank))
-    (doseq [dep (d/bf-seq identity (comp ::sinks meta) sink)]
+    (doseq [dep (d/bf-seq identity (comp ::sinks meta) source)]
       (alter-meta! dep assoc-in [::rank] (next-rank)))))
 
 (defn make-node
@@ -63,10 +63,9 @@
 ;;; Example
 
 (defn doit []
-  (let [op (behavior +)
-        n1 (receiver)
+  (let [n1 (receiver)
         n2 (behavior 42)
-        sum ((lift op) n1 n2)]
+        sum ((lift +) n1 n2)]
     (map sum #(.write js/document %))
     (js/setInterval #(reset! n1 35) 300) ;reset! is like send! kinda
     (js/setInterval #(reset! n1 23) 100)
