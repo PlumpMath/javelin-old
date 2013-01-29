@@ -37,43 +37,54 @@
     (alter-meta! dep assoc-in [::rank] (next-rank))))
 
 (defn add-propagator!
-  "Attaches a watch to atm keyed by sink.  If filter-repeats? is true,
-  only new values are propagated."
-  [atm sink filter-repeats?]
-  (add-watch atm sink (fn [k ref old new]
-                        (if filter-repeats?
-                          (and (not= old new) (propagate! sink))
-                          (propagate! sink)))))
+  "Attaches a watch to atm keyed by sink.  If repeats? is true,
+  all values are repeated.  This should only be called on input
+  atoms."
+  [atm sink repeats?]
+  (add-watch atm sink (fn [_ _ old new]
+                        (if repeats?
+                          (propagate! sink)
+                          (and (not= old new) (propagate! sink))))))
+
+(defn input
+  [atm]
+  (with-let [input atm]
+    (alter-meta! input assoc ::input? true)))
 
 (defn attach!
   "Attaches sink to one or more atoms.  If filter-repeats? is true,
   only new values from the atoms are propagated to sink."
-  [atoms sink filter-repeats?]
+  [atoms sink repeats?]
   (with-let [attached-sink sink]
     (doseq [source (c/map make-node atoms)]
       (alter-meta! source update-in [::sinks] conj sink)
       (if (> (-> source meta ::rank) (-> sink meta ::rank))
         (increase-sink-ranks! source))
-      (add-propagator! source sink filter-repeats?))))
+      (if (-> source meta ::input?)
+        (add-propagator! source sink repeats?)))))
 
 (defn lift
   [f]
   (fn [& atoms]
     (let [update #(apply (if (fn? f) f @f) (c/map deref atoms))]
       (with-let [lifted (atom (update))]
-        (attach! atoms (make-node lifted #(reset! lifted (update))) true)))))
+        (attach! atoms
+                 (make-node lifted #(reset! lifted (update)))
+                 false)))))
 
 (defn map
   [source f]
   (with-let [sink (atom nil)]
-    (attach! [source] (make-node sink #(reset! sink (f @source))) false)))
+    (attach! [source]
+             (make-node sink #(reset! sink (f @source)))
+             true)))
 
 ;;; Example
 
 (defn doit []
-  (let [n1 (atom 0)
+  (let [n1 (input (atom 0))
         n2 (atom 0)
         sum ((lift +) n1 n2)]
-    (map sum #(.write js/document %))
+    (map (map sum identity) #(.write js/document %))
     ;; Meanwhile...
     (.setInterval js/window #(swap! n1 inc) 1000)))
