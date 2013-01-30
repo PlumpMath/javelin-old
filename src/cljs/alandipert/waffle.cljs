@@ -107,9 +107,7 @@
   values and are manipulated using the normal swap! and reset!."
   [atm]
   {:pre [(not (cell? atm))]}
-  (let [watch-fn (fn [_ cell _ _]
-                   (if-not (detached? cell)
-                     (propagate! cell)))]
+  (let [watch-fn (fn [_ cell _ _] (if-not (detached? cell) (propagate! cell)))]
     (doto atm
       (add-watch ::propagate watch-fn)
       make-input-cell)))
