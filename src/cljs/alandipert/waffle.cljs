@@ -13,7 +13,7 @@
 (def swapping (atom ::not-swapping))
 
 (defn make-input-cell
-  "Idempotently mutate the atom atm, adding FRP cell metadata."
+  "Idempotently mutate the atom atm, adding metadata that makes it a cell."
   ([atm]
      (make-input-cell atm (constantly true)))
   ([atm update-fn]
@@ -23,6 +23,9 @@
        (alter-meta! update-in [::thunk] #(or % update-fn)))))
 
 (defn make-formula-cell
+  "Make an input cell and add a validator function to effectively disable
+  swap! and reset!, as the values in formula cells are dictated by the
+  dependency graph and should not be arbitrarily updated."
   [& args]
   (with-let [cell (apply make-input-cell args)]
     (set-validator! cell #(= @swapping %))))
