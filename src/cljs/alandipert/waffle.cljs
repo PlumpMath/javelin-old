@@ -28,7 +28,7 @@
   dependency graph and should not be arbitrarily updated."
   [& args]
   (with-let [cell (apply make-input-cell args)]
-    (set-validator! cell #(= @swapping %))))
+    (set-validator! cell #(and (not= ::not-swapping %) (= @swapping %)))))
 
 (defn increase-sink-ranks!
   "Preorder traversal of tree rooted at source, increasing the rank of
