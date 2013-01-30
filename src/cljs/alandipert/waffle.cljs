@@ -78,5 +78,5 @@
       (with-let [lifted (atom (update))]
         (->> #(reset! lifted (with-meta {::lifted (-> ::rank meta lifted)} (update)))
              (make-formula-cell lifted)
-             (attach atoms))))))
+             (attach! atoms))))))
 
