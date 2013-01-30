@@ -106,14 +106,13 @@
   "FRP-ize an atom, making it an input cell. Input cells accept arbitrary
   values and are manipulated using the normal swap! and reset!."
   [atm]
+  {:pre [(not (cell? atm))]}
   (let [watch-fn (fn [_ cell _ _]
                    (if-not (detached? cell)
                      (propagate! cell)))]
-    (if (cell? atm)
-      (throw (js/Error. "Atom is already an FRP cell!"))
-      (doto atm
-        (add-watch ::propagate watch-fn)
-        make-input-cell))))
+    (doto atm
+      (add-watch ::propagate watch-fn)
+      make-input-cell)))
 
 (defn lift
   "Given a function f or a cell containing a function f, returns a function
