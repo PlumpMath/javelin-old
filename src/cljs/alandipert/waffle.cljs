@@ -19,9 +19,9 @@
 
 (defn make-input-cell
   "Idempotently mutate the atom atm, adding metadata that makes it a cell.
-  The four pieces of metadata that are added are:
+  The pieces of metadata that are added are:
 
-  ::cell     - marks this object as a cell.
+  ::cell     - marker
   ::sinks    - vector of dependent cells.
   ::thunk    - thunk to be invoked on evaluation that may return ::halt
   and stop propagation.
