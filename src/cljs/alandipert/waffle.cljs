@@ -10,6 +10,8 @@
     "Get the next item in a monotonically increasing sequence of integers."
     #(swap! rank inc)))
 
+(def swapping (atom ::not-swapping))
+
 (defn make-input-cell
   "Idempotently mutate the atom atm, adding FRP cell metadata."
   ([atm]
@@ -23,7 +25,7 @@
 (defn make-formula-cell
   [& args]
   (with-let [cell (apply make-input-cell args)]
-    (set-validator! cell #(= (-> ::lifted meta %) (-> ::rank meta cell)))))
+    (set-validator! cell #(= @swapping %))))
 
 (defn increase-sink-ranks!
   "Preorder traversal of tree rooted at source, increasing the rank of
@@ -76,7 +78,8 @@
   (fn [& atoms]
     (let [update #(apply (if (fn? f) f @f) (map deref atoms))]
       (with-let [lifted (atom (update))]
-        (->> #(reset! lifted (with-meta {::lifted (-> ::rank meta lifted)} (update)))
+        (reset! swapping (update))
+        (->> #(->> (update) (reset! swapping) (reset! lifted))
              (make-formula-cell lifted)
              (attach! atoms))))))
 

@@ -13,6 +13,7 @@
                 :compiler {:output-to "public/dev.js"
                            :optimizations :whitespace
                            :pretty-print true
+                           :warnings true
                            ;; :optimizations :advanced
                            }
                 :jar false}
