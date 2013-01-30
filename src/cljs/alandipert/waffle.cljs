@@ -51,8 +51,8 @@
 (defn propagate!
   "Initiate the FRP evaluation process. The atom atm must be an input cell.
   Updates are propagated through the dependency graph in rank order."
-  [atm]
-  (loop [queue (priority-map atm (-> atm meta ::rank))]
+  [cell]
+  (loop [queue (priority-map cell (-> cell meta ::rank))]
     (when (seq queue)
       (let [node (key (peek queue))
             remainder (pop queue)]
@@ -61,6 +61,13 @@
                          remainder
                          (-> node meta ::sinks))
                  remainder))))))
+
+(defn const
+  "Create a constant-valued cell. The value can't be changed via swap!/reset!."
+  [value]
+  (doto (make-input-cell (atom value))
+    (vary-meta assoc ::c true)
+    (set-validator! (constantly false))))
 
 (defn input
   "FRP-ize an atom, making it an input cell. Input cells accept arbitrary
@@ -78,11 +85,12 @@
   values of its arguments. Formula cells cannot be updated directly using
   swap! or reset!."
   [f]
-  (fn [& atoms]
-    (let [update #(apply (if (fn? f) f @f) (map deref atoms))]
+  (fn [& cells]
+    (let [cells  (mapv #(if-not (-> % meta ::rank) (const %) %) cells)
+          update #(apply (if (fn? f) f @f) (map deref cells))]
       (with-let [lifted (atom (update))]
         (->> #(do (->> (update) (reset! swapping) (reset! lifted))
                 (reset! swapping ::not-swapping)) 
              (make-formula-cell lifted)
-             (attach! atoms))))))
+             (attach! cells))))))
 
