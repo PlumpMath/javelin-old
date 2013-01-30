@@ -12,15 +12,30 @@
 
 (def swapping (atom ::not-swapping))
 
+(defn cell?
+  "True if obj is a ClojureScript atom marked with ::cell metadata."
+  [obj]
+  (and (instance? cljs.core/Atom obj) (-> atm meta ::cell)))
+
 (defn make-input-cell
-  "Idempotently mutate the atom atm, adding metadata that makes it a cell."
+  "Idempotently mutate the atom atm, adding metadata that makes it a cell.
+  The four pieces of metadata that are added are:
+
+  ::cell  - marks this object as a cell.
+  ::sinks - vector of dependent cells.
+  ::thunk - thunk to be invoked on evaluation that may return ::halt
+  and stop propagation.
+  ::rank  - numeric ranking that determines evaluation order."
   ([atm]
      (make-input-cell atm (constantly true)))
-  ([atm update-fn]
-     (doto atm
-       (alter-meta! update-in [::sinks] #(or % []))
-       (alter-meta! update-in [::rank] #(or % (next-rank)))
-       (alter-meta! update-in [::thunk] #(or % update-fn)))))
+  ([atm thunk]
+     (if (cell? atm)
+       atm
+       (doto atm
+         (alter-meta! merge {::cell true
+                             ::sinks []
+                             ::rank (next-rank)
+                             ::thunk thunk})))))
 
 (defn make-formula-cell
   "Make an input cell and add a validator function to effectively disable
@@ -31,9 +46,10 @@
     (set-validator! cell #(and (not= ::not-swapping %) (= @swapping %)))))
 
 (defn increase-sink-ranks!
-  "Preorder traversal of tree rooted at source, increasing the rank of
-  all descendents. This ensures that all sinks have higher ranks than
-  their sources---a necessary invariant for glitch elimination."
+  "Preorder traversal of tree rooted at source cell, increasing the
+  rank of all descendents. This ensures that all sinks have higher
+  ranks than their sources---a necessary invariant for glitch
+  elimination."
   [source]
   (doseq [dep (d/bf-seq identity (comp ::sinks meta) source)]
     (alter-meta! dep assoc-in [::rank] (next-rank))))
@@ -73,7 +89,7 @@
   "FRP-ize an atom, making it an input cell. Input cells accept arbitrary
   values and are manipulated using the normal swap! and reset!."
   [atm]
-  (if (-> atm meta ::sinks)
+  (if (cell? atm)
     (throw (js/Error. "Atom is already an FRP cell!"))
     (doto atm
       (add-watch ::propagate (fn [_ atm _ _] (propagate! atm)))
@@ -86,11 +102,10 @@
   swap! or reset!."
   [f]
   (fn [& cells]
-    (let [cells  (mapv #(if-not (-> % meta ::rank) (const %) %) cells)
+    (let [cells  (mapv #(if (cell? %) % (const %)) cells)
           update #(apply (if (fn? f) f @f) (map deref cells))]
       (with-let [lifted (atom (update))]
         (->> #(do (->> (update) (reset! swapping) (reset! lifted))
-                (reset! swapping ::not-swapping)) 
+                (reset! swapping ::not-swapping))
              (make-formula-cell lifted)
              (attach! cells))))))
-
