@@ -78,8 +78,8 @@
   (fn [& atoms]
     (let [update #(apply (if (fn? f) f @f) (map deref atoms))]
       (with-let [lifted (atom (update))]
-        (reset! swapping (update))
-        (->> #(->> (update) (reset! swapping) (reset! lifted))
+        (->> #(do (->> (update) (reset! swapping) (reset! lifted))
+                (reset! swapping ::not-swapping)) 
              (make-formula-cell lifted)
              (attach! atoms))))))
 
