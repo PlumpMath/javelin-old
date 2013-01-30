@@ -108,9 +108,7 @@
   (let [watch-fn (fn [_ cell _ _]
                    (if-not (detached? cell)
                      (propagate! cell)))]
-    (doto atm
-      (add-watch ::propagate watch-fn)
-      make-input-cell)))
+    (doto atm (add-watch ::propagate watch-fn) make-input-cell)))
 
 (defn lift
   "Given a function f or a cell containing a function f, returns a function
@@ -129,6 +127,8 @@
       lifted)))
 
 (defn changes
+  "Given a cell, returns a cell which only propagates pulses that changed
+  the value of the given cell."
   [cell]
   (let [previous (atom ::none)
         update   (fn [value]
