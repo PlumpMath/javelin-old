@@ -21,11 +21,12 @@
   "Idempotently mutate the atom atm, adding metadata that makes it a cell.
   The four pieces of metadata that are added are:
 
-  ::cell  - marks this object as a cell.
-  ::sinks - vector of dependent cells.
-  ::thunk - thunk to be invoked on evaluation that may return ::halt
+  ::cell     - marks this object as a cell.
+  ::sinks    - vector of dependent cells.
+  ::thunk    - thunk to be invoked on evaluation that may return ::halt
   and stop propagation.
-  ::rank  - numeric ranking that determines evaluation order."
+  ::rank     - numeric ranking that determines evaluation order.
+  ::detached - true when this cell should not participate in evaluation."
   ([atm]
      (make-input-cell atm (constantly true)))
   ([atm thunk]
@@ -35,6 +36,7 @@
          (alter-meta! merge {::cell true
                              ::sinks []
                              ::rank (next-rank)
+                             ::detached false
                              ::thunk thunk})))))
 
 (defn make-formula-cell
