@@ -10,6 +10,8 @@
     "Get the next item in a monotonically increasing sequence of integers."
     #(swap! rank inc)))
 
+(def none ::none)
+
 (def swapping (atom ::not-swapping))
 
 (defn atom?
@@ -136,3 +138,9 @@
                      (reset! previous value)
                      ::none))]
     ((lift update) cell)))
+
+(defn snapshot
+  "Takes the value of cell whenever a pulse is received from trigger."
+  [cell trigger]
+  ((lift #(deref* cell)) trigger))
+
