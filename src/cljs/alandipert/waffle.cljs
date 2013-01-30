@@ -80,15 +80,15 @@
   (loop [queue (priority-map cell (-> cell meta ::rank))]
     (when (seq queue)
       (let [cell      (key (peek queue))
-            remainder (pop queue)
+            siblings  (pop queue)
             q-add     #(assoc %1 %2 (-> %2 meta ::rank))
             halt?     #(= ::halt ((-> cell meta ::thunk)))
-            sinks     (-> cell meta ::sinks)]
-        (if (and (seq sinks) (every? detached? sinks)) 
+            children  (-> cell meta ::sinks)]
+        (if (and (seq children) (every? detached? children)) 
           (detach! cell)
           (recur (if-not (halt?)
-                   (reduce q-add remainder (remove detached? sinks))
-                   remainder)))))))
+                   (reduce q-add siblings (remove detached? children))
+                   siblings)))))))
 
 (defn const?
   "Is this a constant-valued cell?"
