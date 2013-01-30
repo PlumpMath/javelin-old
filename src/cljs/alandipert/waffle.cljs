@@ -90,6 +90,11 @@
                    (reduce q-add remainder (remove detached? sinks))
                    remainder)))))))
 
+(defn const?
+  "Is this a constant-valued cell?"
+  [cell]
+  (-> cell meta ::c))
+
 (defn const
   "Create a constant-valued cell. The value can't be changed via swap!/reset!."
   [value]
