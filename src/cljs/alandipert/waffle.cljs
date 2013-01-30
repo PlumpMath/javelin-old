@@ -48,19 +48,30 @@
       (if (> (-> source meta ::rank) (-> sink meta ::rank))
         (increase-sink-ranks! source)))))
 
+(def detached?
+  "Is this cell marked as detached?"
+  (comp ::detached meta))
+
+(def detach!
+  "Mark this cell as detached."
+  #(doto % (alter-meta! update-in [::detached] true)))
+
 (defn propagate!
   "Initiate the FRP evaluation process. The atom atm must be an input cell.
   Updates are propagated through the dependency graph in rank order."
   [cell]
   (loop [queue (priority-map cell (-> cell meta ::rank))]
     (when (seq queue)
-      (let [node (key (peek queue))
-            remainder (pop queue)]
-        (recur (if (not= ::halt ((-> node meta ::thunk)))
-                 (reduce #(assoc %1 %2 (-> %2 meta ::rank))
-                         remainder
-                         (-> node meta ::sinks))
-                 remainder))))))
+      (let [cell      (key (peek queue))
+            remainder (pop queue)
+            q-add     #(assoc %1 %2 (-> %2 meta ::rank))
+            halt?     #(= ::halt ((-> cell meta ::thunk)))
+            sinks     (-> cell meta ::sinks)]
+        (if (every? detached? sinks)
+          (detach! cell)
+          (recur (if-not (halt?)
+                   (reduce q-add remainder (remove detached? sinks))
+                   remainder)))))))
 
 (defn const
   "Create a constant-valued cell. The value can't be changed via swap!/reset!."
