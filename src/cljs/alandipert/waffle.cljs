@@ -12,10 +12,20 @@
 
 (def swapping (atom ::not-swapping))
 
+(defn atom?
+  "True if obj is a ClojureScript atom."
+  [obj]
+  (instance? cljs.core/Atom obj))
+
+(defn deref*
+  "Dereferences obj if it is an atom, otherwise returns obj."
+  [obj]
+  (if (atom? obj) @obj obj))
+
 (defn cell?
   "True if obj is a ClojureScript atom marked with ::cell metadata."
-  [cell]
-  (and (instance? cljs.core/Atom cell) (-> cell meta ::cell)))
+  [obj]
+  (and (atom? obj) (-> obj meta ::cell)))
 
 (defn detached?
   "Is this cell marked as detached?"
@@ -33,7 +43,7 @@
 
   ::cell     - marker
   ::sinks    - vector of dependent cells.
-  ::thunk    - thunk to be invoked on evaluation that may return ::halt
+  ::thunk    - thunk to be invoked on evaluation that may return ::none
                and stop propagation to its sinks.
   ::rank     - numeric ranking that determines evaluation order.
   ::detached - true when this cell should not participate in evaluation."
@@ -41,10 +51,10 @@
      (make-input-cell atm (constantly true)))
   ([atm thunk]
    (doto atm (alter-meta! merge {::cell     true
-                                 ::sinks    []
                                  ::rank     (next-rank)
                                  ::detached false
-                                 ::thunk    thunk}))))
+                                 ::thunk    thunk
+                                 ::sinks    []}))))
 
 (defn make-formula-cell
   "Make an input cell and add a validator function to effectively disable
@@ -68,7 +78,7 @@
   dependency graph that is used for propagation."
   [sources sink]
   (with-let [attached-sink sink]
-    (doseq [source (map make-input-cell sources)]
+    (doseq [source sources]
       (alter-meta! source update-in [::sinks] conj sink)
       (if (> (-> source meta ::rank) (-> sink meta ::rank))
         (increase-sink-ranks! source)))))
@@ -82,25 +92,14 @@
       (let [cell      (key (peek queue))
             siblings  (pop queue)
             q-add     #(assoc %1 %2 (-> %2 meta ::rank))
-            halt?     #(= ::halt ((-> cell meta ::thunk)))
+            halt?     #(= ::none ((-> cell meta ::thunk)))
             children  (-> cell meta ::sinks)]
         (if (and (seq children) (every? detached? children)) 
           (detach! cell)
-          (recur (if-not (halt?)
+          (recur 
+            (if-not (halt?)
                    (reduce q-add siblings (remove detached? children))
                    siblings)))))))
-
-(defn const?
-  "Is this a constant-valued cell?"
-  [cell]
-  (-> cell meta ::c))
-
-(defn const
-  "Create a constant-valued cell. The value can't be changed via swap!/reset!."
-  [value]
-  (doto (make-input-cell (atom value))
-    (vary-meta assoc ::c true)
-    (set-validator! (constantly false))))
 
 (defn input
   "FRP-ize an atom, making it an input cell. Input cells accept arbitrary
@@ -120,11 +119,21 @@
   values of its arguments. Formula cells cannot be updated directly using
   swap! or reset!."
   [f]
-  (fn [& cells]
-    (let [cells  (mapv #(if (cell? %) % (const %)) cells)
-          update #(apply (if (fn? f) f @f) (map deref cells))]
-      (with-let [lifted (atom (update))]
-        (->> #(do (->> (update) (reset! swapping) (reset! lifted))
-                (reset! swapping ::not-swapping))
-             (make-formula-cell lifted)
-             (attach! cells))))))
+  (fn [& args]
+    (let [eval      #(apply (deref* f) (map deref* args))
+          lifted    (atom (eval))
+          commit!   #(do (->> % (reset! swapping) (reset! lifted))
+                       (reset! swapping ::not-swapping))
+          thunk     #(with-let [value (eval)]
+                       (if (not= ::none value) (commit! value)))]
+      (->> thunk (make-formula-cell lifted) (attach! args))
+      lifted)))
+
+(defn changes
+  [cell]
+  (let [previous (atom ::none)
+        update   (fn [value]
+                   (if (not= value @previous)
+                     (reset! previous value)
+                     ::none))]
+    ((lift update) cell)))
