@@ -43,20 +43,22 @@
   "Idempotently mutate the atom atm, adding metadata that makes it a cell.
   The pieces of metadata that are added are:
 
-  ::cell     - marker
-  ::sinks    - vector of dependent cells.
-  ::thunk    - thunk to be invoked on evaluation that may return ::none
-               and stop propagation to its sinks.
-  ::rank     - numeric ranking that determines evaluation order.
-  ::detached - true when this cell should not participate in evaluation."
+  ::cell     - Marker identifying this atom as a cell.
+  ::rank     - Numeric ranking that determines evaluation order.
+  ::sinks    - Vector of dependent cells.
+  ::detached - True when this cell should not participate in evaluation.
+  ::silent   - True when this cell should not propagate to its sinks.
+  ::thunk    - Thunk to be invoked on evaluation that may return ::none
+               and stop propagation to its sinks."
   ([atm]
      (make-input-cell atm (constantly true)))
   ([atm thunk]
    (doto atm (alter-meta! merge {::cell     true
                                  ::rank     (next-rank)
+                                 ::sinks    []
                                  ::detached false
-                                 ::thunk    thunk
-                                 ::sinks    []}))))
+                                 ::silent   false
+                                 ::thunk    thunk}))))
 
 (defn make-formula-cell
   "Make an input cell and add a validator function to effectively disable
@@ -94,7 +96,8 @@
       (let [cell      (key (peek queue))
             siblings  (pop queue)
             q-add     #(assoc %1 %2 (-> %2 meta ::rank))
-            halt?     #(= ::none ((-> cell meta ::thunk)))
+            halt?     #(or (= ::none ((-> cell meta ::thunk)))
+                           (-> cell meta ::silent)) 
             children  (-> cell meta ::sinks)]
         (if (and (seq children) (every? detached? children)) 
           (detach! cell)
@@ -139,8 +142,15 @@
                      ::none))]
     ((lift update) cell)))
 
+(defn silence
+  "Cells that have been silenced get updated during propagation but do not
+  propagate pulses to their sinks."
+  [cell]
+  (doto ((lift identity) cell) 
+    (alter-meta! assoc-in [::silent] true)))
+
 (defn snapshot
   "Takes the value of cell whenever a pulse is received from trigger."
   [cell trigger]
-  ((lift #(deref* cell)) trigger))
+  ((lift (comp first #(vec %&))) (silence cell) trigger))
 
