@@ -96,8 +96,7 @@
             children  (-> cell meta ::sinks)]
         (if (and (seq children) (every? detached? children)) 
           (detach! cell)
-          (recur 
-            (if-not (halt?)
+          (recur (if-not (halt?)
                    (reduce q-add siblings (remove detached? children))
                    siblings)))))))
 
