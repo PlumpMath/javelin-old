@@ -28,8 +28,10 @@
 
 (defn doit []
   (let [in    (w/input (atom 0))
-        outs  [(identity* in) (odd?* in)] 
+        in2   (w/input (atom 0))
+        outs  [(identity* in2) (odd?* in2)] 
         out   (pr* (nth outs 1))
         swap  #(reattach! out (nth outs (mod @in 2)))]
+    (reattach! in2 in)
     (.setInterval js/window #(swap! in inc) 1000)
     (.setInterval js/window swap 3000)))

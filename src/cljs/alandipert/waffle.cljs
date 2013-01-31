@@ -5,7 +5,7 @@
   (:require-macros
    [alandipert.waffle.macros :refer [with with-let]]))
 
-(declare attach! detach!)
+(declare reset-cell! attach! detach!)
 
 ;; PREDICATES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -57,21 +57,25 @@
   ::done     - True when this cell should not participate in evaluation.
   ::silent   - True when this cell should not propagate to its sinks.
   ::thunk    - Thunk to be invoked on evaluation that may return ::none
-               and stop propagation to its sinks."
+  and stop propagation to its sinks."
   ([atm]
    (input-cell atm nil))
   ([atm thunk]
-   (doto atm
-     (alter-meta!
-       merge
-       {::cell     true
-        ::rank     (next-rank) 
-        ::sources  []
-        ::sinks    #{} 
-        ::done     false 
-        ::silent   false 
-        ::thunk    (or thunk (constantly nil))})
-     detach!)))
+   (let [commit! #(let [srcs (-> atm meta ::sources)]
+                    (if (seq srcs)
+                      (reset-cell! atm (deref* (first srcs)))
+                      nil))]
+     (doto atm
+       (alter-meta!
+         merge
+         {::cell     true
+          ::rank     (next-rank) 
+          ::sources  []
+          ::sinks    #{} 
+          ::done     false 
+          ::silent   false 
+          ::thunk    (or thunk commit!)})
+       detach!))))
 
 (defn- increase-sink-ranks!
   "Preorder traversal of tree rooted at source cell, increasing the
@@ -100,6 +104,14 @@
                    (reduce q-add siblings (remove done? children))
                    siblings)))))))
 
+(defn reset-cell!
+  "Reset the contents of a cell without triggering the validator exception."
+  [cell value]
+  (with value
+    (when (not= ::none value)
+      (->> value (reset! swapping) (reset! cell)) 
+      (reset! swapping ::not-swapping))))
+
 ;; CREATE CELL ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn input
@@ -118,10 +130,8 @@
   (fn [& args]
     (let [eval      #(apply (deref* f) (map deref* %))
           lifted    (atom (eval args))
-          commit!   #(do (->> % (reset! swapping) (reset! lifted))
-                       (reset! swapping ::not-swapping))
           thunk     #(with-let [value (eval (-> lifted meta ::sources))]
-                       (if (not= ::none value) (commit! value)))
+                       (reset-cell! lifted value))
           cell-args (filter cell? args)]
       (->> thunk (input-cell lifted) (attach! args))
       (if (or (empty? cell-args) (every? changes? cell-args))
