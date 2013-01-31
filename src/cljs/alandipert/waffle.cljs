@@ -131,11 +131,8 @@
     (let [eval      #(apply (deref* f) (map deref* %))
           lifted    (atom (eval args))
           thunk     #(with-let [value (eval (-> lifted meta ::sources))]
-                       (reset-cell! lifted value))
-          cell-args (filter cell? args)]
+                       (reset-cell! lifted value))] 
       (->> thunk (input-cell lifted) (attach! args))
-      (if (or (empty? cell-args) (every? changes? cell-args))
-        (alter-meta! lifted assoc-in [::changes] true)) 
       lifted)))
 
 ;; CONTROL PROPAGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -153,15 +150,11 @@
   (let [watch-fn    (fn [_ cell _ _]
                       (if-not (done? cell)
                         (propagate! cell)))
-        remove-this (fn [source]
-                      (-> source
-                        (alter-meta!
-                          update-in [::sinks]
-                          (fn [sinks]
-                            (remove #(= cell %) sinks)))))]
+        remove-this #(-> % (alter-meta! update-in [::sinks] disj #{cell}))]
     (mapv remove-this (-> cell meta ::sources))
     (doto cell
       (alter-meta! assoc-in [::sources] [])
+      (alter-meta! assoc-in [::changes] false)
       (add-watch ::propagate watch-fn)
       (set-validator! nil))))
 
@@ -170,14 +163,18 @@
   cell. Attaching a sink to a source sets up the dependency graph."
   [sources sink]
   {:pre [(and (cell? sink) (empty? (-> sink meta ::sources)))]}
-  (with (doto sink
-          (alter-meta! assoc-in [::sources] (vec sources))
-          (remove-watch ::propagate)
-          (set-validator! #(and (not= ::not-swapping %) (= @swapping %))))
+  (let [cell-srcs (filter cell? sources)] 
+    (if (or (empty? cell-srcs) (every? changes? cell-srcs))
+      (alter-meta! sink assoc-in [::changes] true)) 
+    (doto sink
+      (alter-meta! assoc-in [::sources] (vec sources))
+      (remove-watch ::propagate)
+      (set-validator! #(and (not= ::not-swapping %) (= @swapping %))))
     (doseq [source sources]
       (alter-meta! source update-in [::sinks] conj sink)
       (if (> (-> source meta ::rank) (-> sink meta ::rank))
-        (increase-sink-ranks! source)))))
+        (increase-sink-ranks! source)))
+    sink))
 
 (defn changes
   "Given a cell, returns a cell which only propagates pulses that changed
