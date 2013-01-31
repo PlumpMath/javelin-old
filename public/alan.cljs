@@ -2,7 +2,7 @@
   (:require [alandipert.waffle   :as w]
             [alandipert.waffle.e :as e]
             [alandipert.waffle.dom :as dom])
-  (:require-macros [alandipert.waffle.macros :refer [with-let]]))
+  (:require-macros [alandipert.waffle.macros :refer [with with-let]]))
 
 (set! cljs.core/*print-meta* true)
 
@@ -27,12 +27,12 @@
 ;;; DOM: inserting and extracting
 ;;; Thu Jan 31 07:23:28 EST 2013
 
-(defn doit []
+(defn ^:export doit []
 
   (defn random-color []
     (str "#" (.toString (rand-int 16777216) 16)))
 
-  (let [keypresses (dom/events (.-body js/document) "keypress")
+  (let [keypresses (w/changes (dom/events (.-body js/document) "keypress"))
         name (-> (dom/value "name")
                  ((w/lift #(.toUpperCase %)))
                  ((w/lift #(str % (if (seq %) "?")))))]

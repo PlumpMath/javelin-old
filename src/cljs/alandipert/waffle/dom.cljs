@@ -21,7 +21,8 @@
 
   For a full list of available event type strings, see
   http://closure-library.googlecode.com/svn/docs/closure_goog_events_eventtype.js.source.html"
-  [id-or-elem evts] {:pre [(or (string? evts) (every? string? evts))]}
+  [id-or-elem evts]
+  {:pre [(or (string? evts) (every? string? evts))]}
   (w/changes
    (with-let [in (w/input (atom nil))]
      (event/listen (by-id id-or-elem)
