@@ -140,7 +140,8 @@
                    (if (not= value @previous)
                      (reset! previous value)
                      ::none))]
-    (doto ((lift update) cell) (alter-meta! assoc-in [::changes] true))))
+    (doto ((lift update) cell)
+      (alter-meta! assoc-in [::changes] true))))
 
 (defn silence
   "Cells that have been silenced get updated during propagation but do not
