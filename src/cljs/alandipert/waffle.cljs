@@ -34,6 +34,11 @@
   [cell]
   (-> cell meta ::detached))
 
+(defn changes?
+  "Is this cell only propagating when the value changes?"
+  [cell]
+  (-> cell meta ::changes))
+
 (defn detach!
   "Mark this cell as detached."
   [cell]
@@ -128,7 +133,6 @@
                        (reset! swapping ::not-swapping))
           thunk     #(with-let [value (eval)]
                        (if (not= ::none value) (commit! value)))
-          changes?  #(-> % meta ::changes)
           cell-args (filter cell? args)]
       (->> thunk (make-formula-cell lifted) (attach! args))
       (if (or (empty? cell-args) (every? changes? cell-args))
@@ -144,7 +148,7 @@
                    (if (not= value @previous)
                      (reset! previous value)
                      ::none))]
-    (if (-> cell meta ::changes)
+    (if (changes? cell)
       cell
       (doto ((lift update) cell)
         (alter-meta! assoc-in [::changes] true)))))
