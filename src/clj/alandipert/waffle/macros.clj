@@ -7,9 +7,8 @@
   "Binds resource to binding and evaluates body.  Then, returns
   resource.  It's cross between doto and with-open."
   [[binding resource] & body]
-  `(let [res# ~binding] ~@body res#))
+  `(let [~binding ~resource] ~@body ~resource))
 
 (defmacro with
-  "Evaluates "
   [resource & body]
-  `(let [res# ~resource] (do ~@body res#)))
+  `(let [ret# ~resource] ~@body ret#))
