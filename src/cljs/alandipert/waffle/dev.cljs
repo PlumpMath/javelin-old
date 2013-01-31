@@ -15,17 +15,13 @@
 
 (defn pr** [& cells] (mapv pr-cell cells))
 
+(def timer*     #(.setInterval js/window (constantly true) %))
 (def identity*  (w/lift identity))
 (def inc*       (w/lift inc))
 (def pr*        (w/lift log))
 (def odd?*      (w/lift odd?))
 
 (defn doit []
-  (let [a (w/input (atom 0))
-        b (odd?* a) 
-        c (w/changes b) 
-        d (pr* c)
-        ]
-
-    (.setInterval js/window #(swap! a identity) 1000)
-    ))
+  (let [in (w/input (atom 0))]
+    (pr* (w/changes in))
+    (.setInterval js/window #(swap! in identity) 1000)))

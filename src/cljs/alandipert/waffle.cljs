@@ -140,7 +140,7 @@
                    (if (not= value @previous)
                      (reset! previous value)
                      ::none))]
-    ((lift update) cell)))
+    (doto ((lift update) cell) (alter-meta! assoc-in [::changes] true))))
 
 (defn silence
   "Cells that have been silenced get updated during propagation but do not
@@ -149,7 +149,3 @@
   (doto ((lift identity) cell)
     (alter-meta! assoc-in [::silent] true)))
 
-(defn snapshot
-  "Takes the value of cell whenever a pulse is received from trigger."
-  [cell trigger]
-  ((lift (comp first #(vec %&))) (silence cell) trigger))
