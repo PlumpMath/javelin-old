@@ -3,7 +3,7 @@
    [alandipert.priority-map  :refer [priority-map]]
    [alandipert.desiderata    :as    d])
   (:require-macros
-   [alandipert.waffle.macros :refer [with-let]]))
+   [alandipert.waffle.macros :refer [with with-let]]))
 
 (let [rank (atom 0)]
   (def next-rank
@@ -81,7 +81,7 @@
   "Attaches a sink cell to one or more source cells. This creates the
   dependency graph that is used for propagation."
   [sources sink]
-  (with-let [attached-sink sink]
+  (with sink
     (doseq [source sources]
       (alter-meta! source update-in [::sinks] conj sink)
       (if (> (-> source meta ::rank) (-> sink meta ::rank))

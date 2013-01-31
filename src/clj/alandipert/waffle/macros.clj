@@ -1,10 +1,15 @@
 (ns alandipert.waffle.macros
   (:use [clojure.pprint :only [pprint]]))
 
-(defmacro with-let
-  [[binding resource] & body]
-  `(let [~binding ~resource] ~@body ~binding))
+;;; Mutation helper macros.
 
-(defmacro maptemplate
-  [template-fn coll]
-  `(do ~@(map `~#((eval template-fn) %) coll)))
+(defmacro with-let
+  "Binds resource to binding and evaluates body.  Then, returns
+  resource.  It's cross between doto and with-open."
+  [[binding resource] & body]
+  `(let [res# ~binding] ~@body res#))
+
+(defmacro with
+  "Evaluates "
+  [resource & body]
+  `(let [res# ~resource] (do ~@body res#)))
