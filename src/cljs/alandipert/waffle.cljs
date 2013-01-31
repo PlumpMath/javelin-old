@@ -97,9 +97,9 @@
             siblings  (pop queue)
             q-add     #(assoc %1 %2 (-> %2 meta ::rank))
             halt?     #(or (= ::none ((-> cell meta ::thunk)))
-                           (-> cell meta ::silent)) 
+                           (-> cell meta ::silent))
             children  (-> cell meta ::sinks)]
-        (if (and (seq children) (every? detached? children)) 
+        (if (and (seq children) (every? detached? children))
           (detach! cell)
           (recur (if-not (halt?)
                    (reduce q-add siblings (remove detached? children))
@@ -146,11 +146,10 @@
   "Cells that have been silenced get updated during propagation but do not
   propagate pulses to their sinks."
   [cell]
-  (doto ((lift identity) cell) 
+  (doto ((lift identity) cell)
     (alter-meta! assoc-in [::silent] true)))
 
 (defn snapshot
   "Takes the value of cell whenever a pulse is received from trigger."
   [cell trigger]
   ((lift (comp first #(vec %&))) (silence cell) trigger))
-
