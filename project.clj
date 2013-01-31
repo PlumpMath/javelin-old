@@ -8,9 +8,9 @@
   :plugins [[lein-cljsbuild "0.3.0"]]
   :source-paths ["src/clj"]
   :cljsbuild {:builds
-              {:dev
-               {:source-paths ["src/cljs"]
-                :compiler {:output-to "public/dev.js"
+              {:micha
+               {:source-paths ["public" "src/cljs"]
+                :compiler {:output-to "public/micha.js"
                            :optimizations :whitespace
                            :pretty-print true
                            :warnings true
@@ -18,7 +18,7 @@
                            }
                 :jar false}
                :alan
-               {:source-paths ["src/cljs"]
+               {:source-paths ["public" "src/cljs"]
                 :compiler {:output-to "public/alan.js"
                            :optimizations :whitespace
                            :pretty-print true

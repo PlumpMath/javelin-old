@@ -1,4 +1,4 @@
-(ns alandipert.waffle.dev
+(ns micha
   (:require [alandipert.waffle   :as w]
             [alandipert.waffle.e :as e]))
 

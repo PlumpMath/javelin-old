@@ -1,4 +1,4 @@
-(ns alandipert.waffle.alan
+(ns alan
   (:require [alandipert.waffle   :as w]
             [alandipert.waffle.e :as e])
   (:require-macros [alandipert.waffle.macros :refer [with-let]]))
