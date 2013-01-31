@@ -143,7 +143,7 @@
   "Given a cell, returns a cell which only propagates pulses that changed
   the value of the given cell."
   [cell]
-  (if (changes? cell)
+  (if (or (not (cell? cell)) (changes? cell)) 
     cell
     (let [previous (atom ::none)
           update   (fn [value]
