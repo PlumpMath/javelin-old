@@ -32,7 +32,7 @@
   (defn random-color []
     (str "#" (.toString (rand-int 16777216) 16)))
 
-  (let [keypresses (w/changes (dom/events (.-body js/document) "keypress"))
+  (let [keypresses (dom/events (.-body js/document) "keypress")
         name (-> (dom/value "name")
                  ((w/lift #(.toUpperCase %)))
                  ((w/lift #(str % (if (seq %) "?")))))]

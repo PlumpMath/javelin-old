@@ -9,25 +9,35 @@
 
 (defn by-id
   "If id-or-elem is a string, returns the element with the specified
-  id. Otherwise returns id-or-elem which is presumably an element."
+  id. Otherwise returns id-or-elem which is presumably an element.
+
+  If id-or-elem is a string, it may optionally start with #."
   [id-or-elem]
   {:post [(identity %)]}
-  (if (string? id-or-elem) (.getElementById js/document id-or-elem) id-or-elem))
+  (if (string? id-or-elem)
+    (.getElementById js/document (if (= (first id-or-elem) "#")
+                                   (.slice id-or-elem 1)
+                                   id-or-elem))
+    id-or-elem))
 
 (defn events
   "Cell of evts type events fired by id-or-elem.
   evts may be a string or an array of strings.
   Strings should be lower case.
 
+  If id-or-elem is not supplied, it is assumed to be the document.
+
   For a full list of available event type strings, see
   http://closure-library.googlecode.com/svn/docs/closure_goog_events_eventtype.js.source.html"
-  [id-or-elem evts]
-  {:pre [(or (string? evts) (every? string? evts))]}
-  (w/changes
-   (with-let [in (w/input (atom nil))]
-     (event/listen (by-id id-or-elem)
-                   (if (string? evts) evts (apply array evts))
-                   #(reset! in %)))))
+  ([evts]
+     (events (.-body js/document) evts))
+  ([id-or-elem evts]
+     {:pre [(or (string? evts) (every? string? evts))]}
+     (with-let [atm (atom w/none)]
+       (w/input atm)
+       (event/listen (by-id id-or-elem)
+                     (if (string? evts) evts (apply array evts))
+                     #(reset! atm %)))))
 
 (defn value
   "Cell of the form input id-or-elem."
