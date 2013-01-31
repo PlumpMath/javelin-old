@@ -107,10 +107,10 @@
 (defn reset-cell!
   "Reset the contents of a cell without triggering the validator exception."
   [cell value]
-  (with value
-    (when (not= ::none value)
-      (->> value (reset! swapping) (reset! cell)) 
-      (reset! swapping ::not-swapping))))
+  (when (not= ::none value)
+    (->> value (reset! swapping) (reset! cell)) 
+    (reset! swapping ::not-swapping))
+  value)
 
 ;; CREATE CELL ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
