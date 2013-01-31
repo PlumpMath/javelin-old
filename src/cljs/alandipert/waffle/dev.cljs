@@ -24,4 +24,4 @@
 (defn doit []
   (let [in (w/input (atom 0))]
     (pr* (w/changes in))
-    (.setInterval js/window #(swap! in inc) 1000)))
+    (.setInterval js/window #(swap! in identity) 1000)))

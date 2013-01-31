@@ -127,9 +127,14 @@
           commit!   #(do (->> % (reset! swapping) (reset! lifted))
                        (reset! swapping ::not-swapping))
           thunk     #(with-let [value (eval)]
-                       (if (not= ::none value) (commit! value)))]
+                       (if (not= ::none value) (commit! value)))
+          changes?  #(-> % meta ::changes)
+          cell-args (filter cell? args)]
       (->> thunk (make-formula-cell lifted) (attach! args))
-      lifted)))
+      (if (or (empty? cell-args) (every? changes? cell-args))
+        (doto lifted
+          (alter-meta! assoc-in [::changes] true))
+        lifted))))
 
 (defn changes
   "Given a cell, returns a cell which only propagates pulses that changed
