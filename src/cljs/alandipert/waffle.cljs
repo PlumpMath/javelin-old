@@ -131,6 +131,7 @@
 (defn done!
   "Mark this cell as done."
   [cell]
+  {:pre [(cell? cell)]}
   (doto cell (alter-meta! assoc-in [::done] true)))
 
 (defn detach!
@@ -153,6 +154,7 @@
   "Attaches a sink cell to one or more source cells and makes it a formula
   cell. Attaching a sink to a source sets up the dependency graph."
   [sources sink]
+  {:pre [(and (cell? sink) (empty? (-> sink meta ::sources)))]}
   (with (doto sink
           (alter-meta! assoc-in [::sources] (into #{} sources))
           (remove-watch ::propagate)
@@ -166,6 +168,7 @@
   "Given a cell, returns a cell which only propagates pulses that changed
   the value of the given cell."
   [cell]
+  {:pre [(cell? cell)]}
   (if (or (not (cell? cell)) (changes? cell)) 
     cell
     (let [previous (atom ::none)
@@ -180,6 +183,7 @@
   "Given a cell, returns a cell which is updated during propagation but does
   not propagate pulses to their sinks."
   [cell]
+  {:pre [(cell? cell)]}
   (doto ((lift identity) cell)
     (alter-meta! assoc-in [::silent] true)))
 
