@@ -12,7 +12,3 @@
 (defn lift
   [f]
   )
-
-(maptemplate
-  (fn [sym] `(def ~sym (~'lift ~(symbol (str 'cljs) (str sym)))))
-  [map identity filter])
