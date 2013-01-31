@@ -20,9 +20,9 @@
   (instance? cljs.core/Atom obj))
 
 (defn deref*
-  "Dereferences obj if it is an atom, otherwise returns obj."
+  "Dereferences obj if it satisfies IDeref, otherwise returns obj."
   [obj]
-  (if (atom? obj) @obj obj))
+  (if (satisfies? cljs.core/IDeref obj) @obj obj))
 
 (defn cell?
   "True if obj is a ClojureScript atom marked with ::cell metadata."
