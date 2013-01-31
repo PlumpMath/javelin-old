@@ -1,6 +1,7 @@
 (ns alan
   (:require [alandipert.waffle   :as w]
-            [alandipert.waffle.e :as e])
+            [alandipert.waffle.e :as e]
+            [alandipert.waffle.dom :as dom])
   (:require-macros [alandipert.waffle.macros :refer [with-let]]))
 
 (set! cljs.core/*print-meta* true)
@@ -22,14 +23,11 @@
 (def odd?*      (w/lift odd?))
 
 (defn doit []
-  
-  (let [c (w/input (atom "a"))
-        next-char #(.fromCharCode js/String (inc (.charCodeAt %)))
-        chrs ((w/lift interpose) "," c)]
-    
-    (pr* chrs)
-    
-    (.setInterval js/window #(swap! c next-char) 1000)))
+  (let [clicks (dom/events (.-body js/document) "click")
+        name (dom/value "name")]
+    (pr* clicks)
+    (pr* name)
+    ))
 
 
 ;; ;;; 
