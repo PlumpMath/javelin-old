@@ -66,7 +66,7 @@
        merge
        {::cell     true
         ::rank     (next-rank) 
-        ::sources  #{}
+        ::sources  []
         ::sinks    #{} 
         ::done     false 
         ::silent   false 
@@ -116,11 +116,11 @@
   swap! or reset!."
   [f]
   (fn [& args]
-    (let [eval      #(apply (deref* f) (map deref* args))
-          lifted    (atom (eval))
+    (let [eval      #(apply (deref* f) (map deref* %))
+          lifted    (atom (eval args))
           commit!   #(do (->> % (reset! swapping) (reset! lifted))
                        (reset! swapping ::not-swapping))
-          thunk     #(with-let [value (eval)]
+          thunk     #(with-let [value (eval (-> lifted meta ::sources))]
                        (if (not= ::none value) (commit! value)))
           cell-args (filter cell? args)]
       (->> thunk (input-cell lifted) (attach! args))
@@ -145,10 +145,13 @@
                         (propagate! cell)))
         remove-this (fn [source]
                       (-> source
-                        (alter-meta! update-in [::sinks] remove #(= cell %))))]
+                        (alter-meta!
+                          update-in [::sinks]
+                          (fn [sinks]
+                            (remove #(= cell %) sinks)))))]
     (mapv remove-this (-> cell meta ::sources))
     (doto cell
-      (alter-meta! assoc-in [::sources] #{})
+      (alter-meta! assoc-in [::sources] [])
       (add-watch ::propagate watch-fn)
       (set-validator! nil))))
 
@@ -158,7 +161,7 @@
   [sources sink]
   {:pre [(and (cell? sink) (empty? (-> sink meta ::sources)))]}
   (with (doto sink
-          (alter-meta! assoc-in [::sources] (into #{} sources))
+          (alter-meta! assoc-in [::sources] (vec sources))
           (remove-watch ::propagate)
           (set-validator! #(and (not= ::not-swapping %) (= @swapping %))))
     (doseq [source sources]
