@@ -1,8 +1,8 @@
 (ns alan
-  (:require [alandipert.waffle   :as w]
-            [alandipert.waffle.e :as e]
-            [alandipert.waffle.dom :as dom])
-  (:require-macros [alandipert.waffle.macros :refer [with with-let]]))
+  (:require [tailrecursion.javelin   :as w]
+            [tailrecursion.javelin.e :as e]
+            [tailrecursion.javelin.dom :as dom])
+  (:require-macros [tailrecursion.javelin.macros :refer [with with-let]]))
 
 (set! cljs.core/*print-meta* true)
 
@@ -11,9 +11,9 @@
 (defn pr-cell
   [cell]
   (log {:v @cell
-        :r (-> cell meta :alandipert.waffle/rank)
-        :s (-> cell meta :alandipert.waffle/sinks)
-        :f (-> cell meta :alandipert.waffle/thunk)}))
+        :r (-> cell meta :tailrecursion.javelin/rank)
+        :s (-> cell meta :tailrecursion.javelin/sinks)
+        :f (-> cell meta :tailrecursion.javelin/thunk)}))
 
 (defn pr** [& cells] (mapv pr-cell cells))
 

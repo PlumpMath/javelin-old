@@ -1,8 +1,8 @@
 (ns alan
-  (:require [alandipert.waffle   :as w]
-            [alandipert.waffle.e :as e]
-            [alandipert.waffle.dom :as dom])
-  (:require-macros [alandipert.waffle.macros :refer [with with-let]]))
+  (:require [tailrecursion.javelin   :as w]
+            [tailrecursion.javelin.e :as e]
+            [tailrecursion.javelin.dom :as dom])
+  (:require-macros [tailrecursion.javelin.macros :refer [with with-let]]))
 
 ;;; TODO dom tests
 

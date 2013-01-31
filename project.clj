@@ -1,6 +1,6 @@
-(defproject alandipert/waffle "1.0.0-SNAPSHOT"
-  :description "A ClojureScript implementation of Flapjax"
-  :url "https://github.com/alandipert/waffle"
+(defproject tailrecursion/javelin "1.0.0-SNAPSHOT"
+  :description "A Functional Reactive Programming library for ClojureScript"
+  :url "https://github.com/tailrecursion/javelin"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[alandipert/cljs-priority-map "1.0.0-SNAPSHOT"]
@@ -20,10 +20,10 @@
                :alan
                {:source-paths ["public" "src/cljs"]
                 :compiler {:output-to "public/alan.js"
-                           :optimizations :whitespace
-                           :pretty-print true
+                           ;; :optimizations :whitespace
+                           ;; :pretty-print true
                            :warnings true
-                           ;; :optimizations :advanced
+                           :optimizations :advanced
                            }
                 :jar false}
                :test

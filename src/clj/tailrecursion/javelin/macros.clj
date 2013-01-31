@@ -1,4 +1,4 @@
-(ns alandipert.waffle.macros
+(ns tailrecursion.javelin.macros
   (:use [clojure.pprint :only [pprint]]))
 
 ;;; Mutation helper macros.

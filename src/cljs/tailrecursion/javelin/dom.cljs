@@ -1,11 +1,11 @@
-(ns alandipert.waffle.dom
+(ns tailrecursion.javelin.dom
   "Functions for extracting data from and manipulating the DOM."
-  (:require [alandipert.waffle     :as w]
-            [alandipert.waffle.e   :as e]
-            [alandipert.waffle.e   :as b]
+  (:require [tailrecursion.javelin     :as w]
+            [tailrecursion.javelin.e   :as e]
+            [tailrecursion.javelin.e   :as b]
             [clojure.browser.event :as event]
             [goog.dom.forms        :as form])
-  (:require-macros [alandipert.waffle.macros :refer [with-let]]))
+  (:require-macros [tailrecursion.javelin.macros :refer [with-let]]))
 
 (defn by-id
   "If id-or-elem is a string, returns the element with the specified

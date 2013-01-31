@@ -1,9 +1,9 @@
-(ns alandipert.waffle.b
+(ns tailrecursion.javelin.b
   (:require
-    [alandipert.waffle  :as w]
+    [tailrecursion.javelin  :as w]
     [cljs.core          :as cljs])
   (:refer-clojure :exclude [map identity filter])
-  (:require-macros [alandipert.waffle.macros :refer [maptemplate]]))
+  (:require-macros [tailrecursion.javelin.macros :refer [maptemplate]]))
 
 (defn changes
   [cell]

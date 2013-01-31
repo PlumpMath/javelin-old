@@ -1,6 +1,6 @@
-(ns alandipert.waffle.e
+(ns tailrecursion.javelin.e
   (:require
-    [alandipert.waffle  :as w]
+    [tailrecursion.javelin  :as w]
     [cljs.core          :as cljs])
   (:refer-clojure :exclude [map identity filter]))
 

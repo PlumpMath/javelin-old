@@ -1,6 +1,6 @@
-# waffle
+# javelin
 
-A Flapjax implementation in ClojureScript.
+A Functional Reactive Programming library for ClojureScript.
 
 ## Usage
 

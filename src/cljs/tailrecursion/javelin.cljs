@@ -1,9 +1,9 @@
-(ns alandipert.waffle
+(ns tailrecursion.javelin
   (:require
    [alandipert.priority-map  :refer [priority-map]]
    [alandipert.desiderata    :as    d])
   (:require-macros
-   [alandipert.waffle.macros :refer [with with-let]]))
+   [tailrecursion.javelin.macros :refer [with with-let]]))
 
 (declare reset-cell! attach! detach!)
 
