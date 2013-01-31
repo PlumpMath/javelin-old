@@ -17,6 +17,15 @@
                            ;; :optimizations :advanced
                            }
                 :jar false}
+               :alan
+               {:source-paths ["src/cljs"]
+                :compiler {:output-to "public/alan.js"
+                           :optimizations :whitespace
+                           :pretty-print true
+                           :warnings true
+                           ;; :optimizations :advanced
+                           }
+                :jar false}
                :test
                {:source-paths ["src/cljs" "test"]
                 :compiler {:output-to "public/test.js"
