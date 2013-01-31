@@ -12,3 +12,4 @@ pom.xml
 .lein-failures
 .lein-plugins
 /public/*.js
+.DS_Store
