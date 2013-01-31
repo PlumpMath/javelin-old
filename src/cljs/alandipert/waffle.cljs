@@ -143,13 +143,13 @@
   "Given a cell, returns a cell which only propagates pulses that changed
   the value of the given cell."
   [cell]
-  (let [previous (atom ::none)
-        update   (fn [value]
-                   (if (not= value @previous)
-                     (reset! previous value)
-                     ::none))]
-    (if (changes? cell)
-      cell
+  (if (changes? cell)
+    cell
+    (let [previous (atom ::none)
+          update   (fn [value]
+                     (if (not= value @previous)
+                       (reset! previous value)
+                       ::none))]
       (doto ((lift update) cell)
         (alter-meta! assoc-in [::changes] true)))))
 
