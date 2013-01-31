@@ -132,9 +132,8 @@
           cell-args (filter cell? args)]
       (->> thunk (make-formula-cell lifted) (attach! args))
       (if (or (empty? cell-args) (every? changes? cell-args))
-        (doto lifted
-          (alter-meta! assoc-in [::changes] true))
-        lifted))))
+        (alter-meta! lifted assoc-in [::changes] true)) 
+      lifted)))
 
 (defn changes
   "Given a cell, returns a cell which only propagates pulses that changed
