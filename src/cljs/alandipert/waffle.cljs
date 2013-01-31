@@ -9,6 +9,10 @@
 
 ;; PREDICATES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(def none
+  "Value indicating that there is no value to return."
+  ::none)
+
 (defn atom?
   "True if obj is a ClojureScript atom."
   [obj]
@@ -35,8 +39,6 @@
   (def next-rank
     "Get the next item in a monotonically increasing sequence of integers."
     #(swap! rank inc)))
-
-(def none ::none)
 
 (def swapping (atom ::not-swapping))
 
