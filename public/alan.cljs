@@ -21,18 +21,33 @@
 (def inc*       (w/lift inc))
 (def pr*        (w/lift log))
 (def odd?*      (w/lift odd?))
+(def args       #(vec %&))
+
+
+;;; DOM: inserting and extracting
+;;; Thu Jan 31 07:23:28 EST 2013
 
 (defn doit []
-  (let [clicks (dom/events (.-body js/document) "click")
-        name (dom/value "name")]
-    (pr* clicks)
-    (pr* name)
+
+  (defn random-color []
+    (str "#" (.toString (rand-int 16777216) 16)))
+
+  (let [keypresses (dom/events (.-body js/document) "keypress")
+        name (-> (dom/value "name")
+                 ((w/lift #(.toUpperCase %)))
+                 ((w/lift #(str % (if (seq %) "?")))))]
+    (dom/insert! name "yourname" "innerHTML")
+    (dom/insert! ((w/lift random-color) keypresses)
+                 js/document "body" "style" "backgroundColor")
+
+    (pr* keypresses)
+
     ))
 
 
-;; ;;; 
+;; ;;;
 ;; ;;; LazySeq experiments, Thu Jan 31 04:16:09 EST 2013
-;; ;;; 
+;; ;;;
 
 ;; (extend-type cljs.core/Atom
 ;;   cljs.core/ISeqable
@@ -68,16 +83,16 @@
 ;;   ;;       next-char #(.fromCharCode js/String (inc (.charCodeAt %)))
 ;;   ;;       sep (identity* ",")
 ;;   ;;       chrs (->cell (interpose sep c))]
-    
+
 ;;   ;;   (pr* chrs)
-    
+
 ;;   ;;   (.setInterval js/window #(swap! c next-char) 1000))
 
 ;;   (let [c (w/input (atom "a"))
 ;;         chrs ((w/lift interpose) "," c)
 ;;         next-char #(.fromCharCode js/String (inc (.charCodeAt %)))]
-    
+
 ;;     (pr* chrs)
-    
+
 ;;     (.setInterval js/window #(swap! c next-char) 1000))
 ;;   )
