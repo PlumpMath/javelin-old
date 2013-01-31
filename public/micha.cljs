@@ -27,11 +27,12 @@
   (w/attach! sources sink))
 
 (defn doit []
-  (let [in    (w/input (atom 0))
-        in2   (w/input (atom 0))
-        outs  [(identity* in2) (odd?* in2)] 
-        out   (pr* (nth outs 1))
-        swap  #(reattach! out (nth outs (mod @in 2)))]
-    (reattach! in2 in)
-    (.setInterval js/window #(swap! in inc) 1000)
+  (let [in1   (w/input (atom 0))
+        in2   (w/input (atom 0)) 
+        in3   (w/changes in2)
+        outs  [(identity* in3) (odd?* in3)] 
+        out   (pr* (w/changes (nth outs 1)))
+        swap  #(reattach! out (nth outs (mod @in1 2)))]
+    (reattach! in2 in1)
+    (.setInterval js/window #(swap! in1 inc) 1000)
     (.setInterval js/window swap 3000)))

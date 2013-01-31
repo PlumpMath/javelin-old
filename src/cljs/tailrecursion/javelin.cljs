@@ -121,6 +121,8 @@
   {:pre [(not (cell? atm))]}
   (input-cell atm))
 
+;; LIFTING FUNCTIONS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn lift
   "Given a function f or a cell containing a function f, returns a function
   that returns a formula cell whose value is always f applied to the derefed
@@ -134,6 +136,20 @@
                        (reset-cell! lifted value))]
       (->> thunk (input-cell lifted) (attach! args))
       lifted)))
+
+(defn collect
+  "Given a function or a function-valued cell f, a value or cell val, and a
+  cell, returns a cell whose value is (f previous-value @cell), where the
+  previous-value argument is initially val and subsequently is the previous
+  value of the result cell."
+  [f val]
+  (fn [cell]
+    {:pre [(cell? cell)]}
+    (let [previous (atom (deref* val))
+          update   #(with-let [value (%1 @previous %2)]
+                      (if (not= value ::none)
+                        (reset! previous value)))]
+      ((lift update) f cell))))
 
 ;; CONTROL PROPAGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -181,15 +197,10 @@
   the value of the given cell."
   [cell]
   {:pre [(cell? cell)]}
-  (if (or (not (cell? cell)) (changes? cell))
+  (if (changes? cell)
     cell
-    (let [previous (atom ::none)
-          update   (fn [value]
-                     (if (not= value @previous)
-                       (reset! previous value)
-                       ::none))]
-      (doto ((lift update) cell)
-        (alter-meta! assoc-in [::changes] true)))))
+    (doto ((collect #(if (not= %1 %2) %2 ::none) ::none) cell)
+      (alter-meta! assoc-in [::changes] true))))
 
 (defn silence
   "Given a cell, returns a cell which is updated during propagation but does
