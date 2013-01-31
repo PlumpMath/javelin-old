@@ -69,11 +69,11 @@
        (alter-meta!
          merge
          {::cell     true
-          ::rank     (next-rank) 
+          ::rank     (next-rank)
           ::sources  []
-          ::sinks    #{} 
-          ::done     false 
-          ::silent   false 
+          ::sinks    #{}
+          ::done     false
+          ::silent   false
           ::thunk    (or thunk commit!)})
        detach!))))
 
@@ -108,7 +108,7 @@
   "Reset the contents of a cell without triggering the validator exception."
   [cell value]
   (when (not= ::none value)
-    (->> value (reset! swapping) (reset! cell)) 
+    (->> value (reset! swapping) (reset! cell))
     (reset! swapping ::not-swapping))
   value)
 
@@ -131,7 +131,7 @@
     (let [eval      #(apply (deref* f) (map deref* %))
           lifted    (atom (eval args))
           thunk     #(with-let [value (eval (-> lifted meta ::sources))]
-                       (reset-cell! lifted value))] 
+                       (reset-cell! lifted value))]
       (->> thunk (input-cell lifted) (attach! args))
       lifted)))
 
@@ -163,9 +163,9 @@
   cell. Attaching a sink to a source sets up the dependency graph."
   [sources sink]
   {:pre [(and (cell? sink) (empty? (-> sink meta ::sources)))]}
-  (let [cell-srcs (filter cell? sources)] 
+  (let [cell-srcs (filter cell? sources)]
     (if (or (empty? cell-srcs) (every? changes? cell-srcs))
-      (alter-meta! sink assoc-in [::changes] true)) 
+      (alter-meta! sink assoc-in [::changes] true))
     (doto sink
       (alter-meta! assoc-in [::sources] (vec sources))
       (remove-watch ::propagate)
@@ -181,7 +181,7 @@
   the value of the given cell."
   [cell]
   {:pre [(cell? cell)]}
-  (if (or (not (cell? cell)) (changes? cell)) 
+  (if (or (not (cell? cell)) (changes? cell))
     cell
     (let [previous (atom ::none)
           update   (fn [value]
@@ -198,4 +198,3 @@
   {:pre [(cell? cell)]}
   (doto ((lift identity) cell)
     (alter-meta! assoc-in [::silent] true)))
-
