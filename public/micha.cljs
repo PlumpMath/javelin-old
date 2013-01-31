@@ -21,13 +21,15 @@
 (def pr*        (w/lift log))
 (def odd?*      (w/lift odd?))
 
+(defn reattach!
+  [sink & sources]
+  (w/detach! sink)
+  (w/attach! sources sink))
+
 (defn doit []
-  (let [last  (atom 0)
-        in    (w/input (atom 0))
+  (let [in    (w/input (atom 0))
         outs  [(identity* in) (odd?* in)] 
-        out   (pr* (nth outs @last))
-        swap  #(do
-                 (w/detach! out)
-                 (w/attach! [(nth outs (mod (swap! last inc) 2))] out))]
+        out   (pr* (nth outs 1))
+        swap  #(reattach! out (nth outs (mod @in 2)))]
     (.setInterval js/window #(swap! in inc) 1000)
-    (.setInterval js/window swap 2000)))
+    (.setInterval js/window swap 3000)))
