@@ -7,11 +7,17 @@
 
 (declare reset-cell! attach! detach!)
 
-;; PREDICATES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; EXPORTED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def none
   "Value indicating that there is no value to return."
   ::none)
+
+(def inputs
+  "Set containing all input cells."
+  (atom #{}))
+
+;; PREDICATES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn atom?
   "True if obj is a ClojureScript atom."
@@ -104,7 +110,7 @@
                    (reduce q-add siblings (remove done? children))
                    siblings)))))))
 
-(defn reset-cell!
+(defn- reset-cell!
   "Reset the contents of a cell without triggering the validator exception."
   [cell value]
   (when (not= ::none value)
@@ -167,6 +173,7 @@
                       (if-not (done? cell)
                         (propagate! cell)))
         remove-this #(-> % (alter-meta! update-in [::sinks] disj #{cell}))]
+    (swap! inputs conj cell)
     (mapv remove-this (-> cell meta ::sources))
     (doto cell
       (alter-meta! assoc-in [::sources] [])
@@ -180,6 +187,7 @@
   [sources sink]
   {:pre [(and (cell? sink) (empty? (-> sink meta ::sources)))]}
   (let [cell-srcs (filter cell? sources)]
+    (swap! inputs disj #{sink})
     (if (or (empty? cell-srcs) (every? changes? cell-srcs))
       (alter-meta! sink assoc-in [::changes] true))
     (doto sink
